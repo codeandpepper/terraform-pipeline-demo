@@ -139,6 +139,5 @@ jobs:
     - name: Tests
       id: tests
       continue-on-error: true
-      with:
-        working-directory: ./demo-app
+      working-directory: ./demo-app
       run: npm run e2e
