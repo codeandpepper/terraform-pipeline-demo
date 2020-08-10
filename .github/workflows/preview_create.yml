@@ -1,0 +1,144 @@
+name: 'Preview create'
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+env:
+  ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  TF_VAR_docker_url: ${{ secrets.DOCKER_URL }}
+  TF_VAR_docker_username: ${{ secrets.DOCKER_USERNAME }}
+  TF_VAR_docker_password: ${{ secrets.DOCKER_PASSWORD }}
+  TF_VAR_tag: ${{ github.sha }}
+
+jobs:
+  setup:
+    name: 'Setup environment'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+    - uses: actions/checkout@v2
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform create Workspace
+      id: workspace
+      run: terraform workspace new "ephemeral-$GITHUB_HEAD_REF"
+
+  build_app:
+    name: 'Build App'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: azure/docker-login@v1
+      name: Build Backend docker image
+      with:
+        login-server: ${{ secrets.DOCKER_URL }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - run: |
+        cd demo-app
+        docker build -t ${{ secrets.DOCKER_URL }}/demo-app:${{ github.sha }} .
+        docker tag ${{ secrets.DOCKER_URL }}/demo-app:${{ github.sha }} ${{ secrets.DOCKER_URL }}/demo-app:pr$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
+        docker push ${{ secrets.DOCKER_URL }}/demo-app
+
+  terraform:
+    name: 'Plan & Apply'
+    needs: [setup, build_app]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+    - uses: actions/checkout@v2
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform select Workspace
+      id: workspace
+      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
+
+    - name: Get App URL
+      id: app
+      run: terraform output -json -no-color app
+
+    - name: Add Pull Request comment
+      uses: actions/github-script@0.9.0
+      env:
+        URL: ${{ steps.app.outputs.stdout }}        
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const app = JSON.parse(process.env.URL);
+          const output = `[App link](https://${app.hostname})`;
+          
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+
+  e2e:
+    name: 'E2E'
+    needs: [setup, build_app, terraform]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1   
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+        terraform_wrapper: false
+    - name: Terraform Init
+      id: init
+      working-directory: ./infrastructure
+      run: terraform init
+
+    - name: Terraform select Workspace
+      id: workspace
+      working-directory: ./infrastructure
+      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+
+    - name: Get App URL
+      id: app
+      working-directory: ./infrastructure
+      run: echo ::set-output name=value::$(terraform output -json -no-color app | jq -r '.hostname')
+
+    - name: 'Setup Node.js'
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+
+    - name: NPM cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Tests
+      id: tests
+      continue-on-error: true
+      with:
+        working-directory: ./demo-app
+      run: npm run e2e

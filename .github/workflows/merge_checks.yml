@@ -1,0 +1,118 @@
+name: 'Merge'
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+env:
+  ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  TF_VAR_docker_url: ${{ secrets.DOCKER_URL }}
+  TF_VAR_docker_username: ${{ secrets.DOCKER_USERNAME }}
+  TF_VAR_docker_password: ${{ secrets.DOCKER_PASSWORD }}
+  TF_VAR_tag: ${{ github.sha }}
+
+jobs:
+  checks:
+    name: 'Checks'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: 'Setup Node.js'
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+
+    - name: NPM cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-        
+
+    - name: 'Install NPM dependencies'
+      working-directory: ./demo-app
+      run: npm ci
+
+    - name: 'Demo app lint'
+      working-directory: ./demo-app
+      run: npm run lint
+
+    - name: 'Demo app tests'
+      working-directory: ./demo-app
+      run: npm run test
+
+    - name: 'NPM Packages Audit'
+      working-directory: ./demo-app
+      run: npx audit-ci -m
+
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+
+    - name: Terraform Format
+      id: fmt
+      working-directory: ./infrastructure
+      run: terraform fmt
+      continue-on-error: true
+
+    - name: Terraform Init
+      id: init
+      working-directory: ./infrastructure
+      run: terraform init
+
+    - name: Terraform Workspace
+      id: workspace
+      working-directory: ./infrastructure
+      run: terraform workspace select dev
+
+    - name: Terraform Validate
+      id: validate
+      working-directory: ./infrastructure
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+      working-directory: ./infrastructure
+      run: terraform plan -no-color
+      continue-on-error: true
+
+    - name: Add Pull Request comment
+      uses: actions/github-script@0.9.0
+      env:
+        PLAN: ${{ steps.plan.outputs.stdout }}
+        TF_FMT: ${{ steps.fmt.outcome }}
+        TF_INIT: ${{ steps.init.outcome }}
+        TF_VALIDATE: ${{ steps.validate.outputs.stdout }}
+        TF_PLAN: ${{ steps.plan.outcome }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const plan = `${process.env.PLAN}`;
+          const filtered_plan = plan.split(/\r?\n/).filter(line => line.match("(^.*[#~+-] .*|^[[:punct:]]|Plan)"));    
+          const summary = filtered_plan.pop();
+          const short_plan = filtered_plan.join("\n");
+          const output = `${process.env.TF_FMT == 'success' ? '✔️' : '❌'} Terraform Format and Style
+          ${process.env.TF_INIT == 'success' ? '✔️' : '❌'} Terraform Initialization
+          ${process.env.TF_VALIDATE.trim() == 'Success! The configuration is valid.' ? '✔️' : '❌'} Terraform Validation
+          ${process.env.TF_PLAN == 'success' ? '✔️' : '❌'} Terraform Plan (${summary ? summary.slice(6, -1) : 'n/a'})
+
+          <details><summary>Predicted changes to dev infrastructure when this pull request is merged</summary>
+          
+          \`\`\`text
+          ${short_plan}
+          \`\`\`
+          
+          </details>`;
+          
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })

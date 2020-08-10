@@ -1,0 +1,61 @@
+name: 'Preview destory'
+
+on:
+  pull_request:
+    types: [closed]
+
+env:
+  ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  TF_VAR_docker_url: ${{ secrets.DOCKER_URL }}
+  TF_VAR_docker_username: ${{ secrets.DOCKER_USERNAME }}
+  TF_VAR_docker_password: ${{ secrets.DOCKER_PASSWORD }}
+  TF_VAR_tag: ${{ github.sha }}
+
+jobs:
+  terraform:
+    name: 'Destroy'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+    - uses: actions/checkout@v2
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Workspace
+      id: workspace
+      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+
+    - name: Terraform Destroy
+      run: terraform destroy -auto-approve
+
+  clean:
+    name: 'Cleanup'
+    needs: terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+    steps:
+    - uses: actions/checkout@v2
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.12.25
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform remove Workspace
+      id: workspace
+      run: terraform workspace delete "ephemeral-$GITHUB_HEAD_REF"
