@@ -72,7 +72,7 @@ jobs:
       
   e2e:
     name: 'E2E'
-    needs: [setup, build_app, terraform]
+    needs: [build_app, terraform]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1   
