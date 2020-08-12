@@ -136,8 +136,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
+    - name: Install Angular CLI
+      run: npm install -g @angular/cli
+
     - name: Tests
       id: tests
-      continue-on-error: true
       working-directory: ./demo-app
       run: ng e2e --devServerTarget="" --base-url={{ steps.app.output.value }}
