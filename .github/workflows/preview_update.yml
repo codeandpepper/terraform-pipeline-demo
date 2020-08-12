@@ -63,10 +63,6 @@ jobs:
       id: validate
       run: terraform validate -no-color
 
-    - name: Terraform Taint database
-      id: taint_db
-      run: terraform taint azurerm_sql_database.sql_database
-
     - name: Terraform Apply
       run: terraform apply -auto-approve
 
