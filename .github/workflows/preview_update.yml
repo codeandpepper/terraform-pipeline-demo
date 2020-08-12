@@ -103,7 +103,7 @@ jobs:
     - name: NPM cache
       uses: actions/cache@v2
       with:
-        path: ~/.npm
+        path: demo-app/node_modules
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
