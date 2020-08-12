@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: azure/docker-login@v1
-      name: Build Backend docker image
+      name: Build App docker image
       with:
         login-server: ${{ secrets.DOCKER_URL }}
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -63,16 +63,12 @@ jobs:
       id: validate
       run: terraform validate -no-color
 
-    - name: Terraform Taint database
-      id: taint_db
-      run: terraform taint azurerm_sql_database.sql_database
-
     - name: Terraform Apply
       run: terraform apply -auto-approve
-      
+
   e2e:
     name: 'E2E'
-    needs: [setup, build_app, terraform]
+    needs: [build_app, terraform]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1   
@@ -103,14 +99,15 @@ jobs:
     - name: NPM cache
       uses: actions/cache@v2
       with:
-        path: ~/.npm
+        path: demo-app/node_modules
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
+    - name: Install Angular CLI
+      run: npm install -g @angular/cli
+
     - name: Tests
       id: tests
-      continue-on-error: true
-      with:
-        working-directory: ./demo-app
-      run: npm run e2e
+      working-directory: ./demo-app
+      run: ng e2e --devServerTarget="" --base-url="https://${{ steps.app.outputs.value }}/"

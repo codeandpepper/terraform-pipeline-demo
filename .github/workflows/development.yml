@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: azure/docker-login@v1
-      name: Build Backend docker image
+      name: Build App docker image
       with:
         login-server: ${{ secrets.DOCKER_URL }}
         username: ${{ secrets.DOCKER_USERNAME }}

@@ -42,7 +42,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: azure/docker-login@v1
-      name: Build Backend docker image
+      name: Build App docker image
       with:
         login-server: ${{ secrets.DOCKER_URL }}
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -131,14 +131,15 @@ jobs:
     - name: NPM cache
       uses: actions/cache@v2
       with:
-        path: ~/.npm
+        path: demo-app/node_modules
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
+    - name: Install Angular CLI
+      run: npm install -g @angular/cli
+
     - name: Tests
       id: tests
-      continue-on-error: true
-      with:
-        working-directory: ./demo-app
-      run: npm run e2e
+      working-directory: ./demo-app
+      run: ng e2e --devServerTarget="" --base-url="https://${{ steps.app.outputs.value }}/"

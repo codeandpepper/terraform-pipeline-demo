@@ -30,7 +30,7 @@ jobs:
     - name: NPM cache
       uses: actions/cache@v2
       with:
-        path: ~/.npm
+        path: demo-app/node_modules
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-        
@@ -86,10 +86,6 @@ jobs:
       uses: actions/github-script@0.9.0
       env:
         PLAN: ${{ steps.plan.outputs.stdout }}
-        TF_FMT: ${{ steps.fmt.outcome }}
-        TF_INIT: ${{ steps.init.outcome }}
-        TF_VALIDATE: ${{ steps.validate.outputs.stdout }}
-        TF_PLAN: ${{ steps.plan.outcome }}
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -97,13 +93,8 @@ jobs:
           const filtered_plan = plan.split(/\r?\n/).filter(line => line.match("(^.*[#~+-] .*|^[[:punct:]]|Plan)"));    
           const summary = filtered_plan.pop();
           const short_plan = filtered_plan.join("\n");
-          const output = `${process.env.TF_FMT == 'success' ? '✔️' : '❌'} Terraform Format and Style
-          ${process.env.TF_INIT == 'success' ? '✔️' : '❌'} Terraform Initialization
-          ${process.env.TF_VALIDATE.trim() == 'Success! The configuration is valid.' ? '✔️' : '❌'} Terraform Validation
-          ${process.env.TF_PLAN == 'success' ? '✔️' : '❌'} Terraform Plan (${summary ? summary.slice(6, -1) : 'n/a'})
+          const output = `<details><summary>Predicted changes to dev infrastructure (${summary ? summary.slice(6, -1) : 'n/a'})</summary>
 
-          <details><summary>Predicted changes to dev infrastructure when this pull request is merged</summary>
-          
           \`\`\`text
           ${short_plan}
           \`\`\`
