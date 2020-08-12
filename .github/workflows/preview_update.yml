@@ -69,7 +69,7 @@ jobs:
 
     - name: Terraform Apply
       run: terraform apply -auto-approve
-      
+
   e2e:
     name: 'E2E'
     needs: [build_app, terraform]
@@ -112,4 +112,4 @@ jobs:
       id: tests
       continue-on-error: true
       working-directory: ./demo-app
-      run: npm run e2e
+      run: ng e2e --devServerTarget="" --base-url={{ steps.app.output.value }}

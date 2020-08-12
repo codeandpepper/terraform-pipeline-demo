@@ -8,6 +8,7 @@ locals {
     }
     app_settings = {
         "APPINSIGHTS_KEY"                         = azurerm_application_insights.insights.instrumentation_key
+        "ENVIRONMENT"                             = local.config.name
     }
     container_settings = {        
         "APPSETTINGS"                             = jsonencode(merge(local.app_settings, local.config.app_settings))
