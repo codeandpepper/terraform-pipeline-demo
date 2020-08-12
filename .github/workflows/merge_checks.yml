@@ -94,9 +94,11 @@ jobs:
           const summary = filtered_plan.pop();
           const short_plan = filtered_plan.join("\n");
           const output = `<details><summary>Predicted changes to dev infrastructure (${summary ? summary.slice(6, -1) : 'n/a'})</summary>
+
           \`\`\`text
           ${short_plan}
           \`\`\`
+          
           </details>`;
           
           github.issues.createComment({
