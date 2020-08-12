@@ -142,4 +142,4 @@ jobs:
     - name: Tests
       id: tests
       working-directory: ./demo-app
-      run: ng e2e --devServerTarget="" --base-url=${{ steps.app.outputs.value }} --browsers=ChromeHeadless
+      run: ng e2e --devServerTarget="" --base-url=${{ steps.app.outputs.value }}
