@@ -54,4 +54,5 @@ Command | Meaning
 `terraform workspace delete foo` | Deletes workspace named `foo` (state must be empty)
 
 ## Applying infrastructure changes
-It is advised to run `terraform plan` first to have better understanding what Terraform will do. Then run `terraform apply` to apply infrastructure changes.
+It is advised to run `terraform plan` first to have better understanding what Terraform will do. 
+Run `terraform apply` to apply infrastructure changes.
