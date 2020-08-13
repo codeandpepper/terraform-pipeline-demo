@@ -32,9 +32,13 @@ jobs:
       id: init
       run: terraform init
 
-    - name: Terraform Workspace
+    - name: Sanitize branch name
+      id: branch_name
+      run: echo ::set-output name=value::$(echo $GITHUB_HEAD_REF | sed "s|/|-|")
+
+    - name: Terraform create Workspace
       id: workspace
-      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+      run: terraform workspace new "ephemeral-${{ steps.branch_name.outputs.value }}"   
 
     - name: Terraform Destroy
       run: terraform destroy -auto-approve
@@ -56,6 +60,10 @@ jobs:
       id: init
       run: terraform init
 
-    - name: Terraform remove Workspace
+    - name: Sanitize branch name
+      id: branch_name
+      run: echo ::set-output name=value::$(echo $GITHUB_HEAD_REF | sed "s|/|-|")
+
+    - name: Terraform create Workspace
       id: workspace
-      run: terraform workspace delete "ephemeral-$GITHUB_HEAD_REF"
+      run: terraform workspace new "ephemeral-${{ steps.branch_name.outputs.value }}"   
