@@ -36,8 +36,6 @@ SECRET | Value
 `ARM_CLIENT_SECRET` | Azure application client secret
 `ARM_SUBSCRIPTION_ID` | Azure subsription identifier
 `ARM_TENANT_ID` | Azure application tenant identifier
-`SENDGRID_APIKEY` | Sendgrid API Key
-`SLACK_WEBHOOK_URL` | (optional) NYI
 
 _NOTE: To run Terraform locally above secrets must be set as environment variables._
 
@@ -56,4 +54,5 @@ Command | Meaning
 `terraform workspace delete foo` | Deletes workspace named `foo` (state must be empty)
 
 ## Applying infrastructure changes
-It is advised to run `terraform plan` first to have better understanding what Terraform will do. Then run `terraform apply` to apply infrastructure changes.
+It is advised to run `terraform plan` first to have better understanding what Terraform will do. 
+Run `terraform apply` to apply infrastructure changes.
