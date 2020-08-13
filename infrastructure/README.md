@@ -36,8 +36,6 @@ SECRET | Value
 `ARM_CLIENT_SECRET` | Azure application client secret
 `ARM_SUBSCRIPTION_ID` | Azure subsription identifier
 `ARM_TENANT_ID` | Azure application tenant identifier
-`SENDGRID_APIKEY` | Sendgrid API Key
-`SLACK_WEBHOOK_URL` | (optional) NYI
 
 _NOTE: To run Terraform locally above secrets must be set as environment variables._
 
