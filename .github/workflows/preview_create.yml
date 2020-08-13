@@ -32,9 +32,13 @@ jobs:
       id: init
       run: terraform init
 
+    - name: Sanitize branch name
+      id: branch_name
+      run: echo ::set-output name=value::$(echo $GITHUB_HEAD_REF | sed "s|/|-|")
+
     - name: Terraform create Workspace
       id: workspace
-      run: terraform workspace new "ephemeral-$GITHUB_HEAD_REF"
+      run: terraform workspace new "ephemeral-${{ steps.branch_name.outputs.value }}"   
 
   build_app:
     name: 'Build App'
@@ -70,9 +74,13 @@ jobs:
       id: init
       run: terraform init
 
-    - name: Terraform select Workspace
+    - name: Sanitize branch name
+      id: branch_name
+      run: echo ::set-output name=value::$(echo $GITHUB_HEAD_REF | sed "s|/|-|")
+
+    - name: Terraform create Workspace
       id: workspace
-      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+      run: terraform workspace new "ephemeral-${{ steps.branch_name.outputs.value }}"   
 
     - name: Terraform Apply
       run: terraform apply -auto-approve
@@ -113,10 +121,14 @@ jobs:
       working-directory: ./infrastructure
       run: terraform init
 
-    - name: Terraform select Workspace
+    - name: Sanitize branch name
+      id: branch_name
+      run: echo ::set-output name=value::$(echo $GITHUB_HEAD_REF | sed "s|/|-|")
+
+    - name: Terraform create Workspace
       id: workspace
       working-directory: ./infrastructure
-      run: terraform workspace select "ephemeral-$GITHUB_HEAD_REF"
+      run: terraform workspace new "ephemeral-${{ steps.branch_name.outputs.value }}"      
 
     - name: Get App URL
       id: app
